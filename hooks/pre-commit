@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+# Ref:
+# 	http://dougireton.com/blog/2012/12/10/creating-a-git-pre-commit-hook-for-chef-cookbooks/
+#
+
+
 # check for whitespace errors
 git_ws_check = `git diff-index --check --cached HEAD --`
 unless $?.success?
