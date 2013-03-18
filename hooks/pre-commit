@@ -6,6 +6,12 @@
 
 
 # check for whitespace errors
+RED='[1;31m'
+YELLOW='[1;33m'
+CYAN='[1;36m'
+GREEN='[1;32m'
+N='[0m'
+
 git_ws_check = `git diff-index --check --cached HEAD --`
 unless $?.success?
   puts git_ws_check
@@ -16,30 +22,33 @@ COOKBOOK_PATH = File.split `git rev-parse --show-toplevel`
 PARENT_PATH = COOKBOOK_PATH[0]
 COOKBOOK_NAME = COOKBOOK_PATH[1].chomp # remove trailing newline
 
-puts 'Running knife cookbook test...'
-knife_output = `knife cookbook test #{ COOKBOOK_NAME } -o #{ PARENT_PATH } -c ~/chef/wit/chef-repo/.chef/knife.rb`
+puts '[ PRE-COMMIT ] Running knife cookbook test...'
+knife_output = `knife cookbook test #{ COOKBOOK_NAME } -o #{ PARENT_PATH }  | sed -e 's/.*/\t\t\t> &/g'`
 unless $?.success?
-  puts knife_output
+  puts "[ PRE-COMMIT ]   #{RED}FAIL#{N} #{knife_output}"
   exit 1
 end
+puts "[ PRE-COMMIT ]   #{GREEN}Passsed#{N} 'knife cookbook test'"
 
-puts 'Running tailor...'
-
+puts '[ PRE-COMMIT ] Running tailor...'
 # Get the file names of (A)dded, (C)opied, (M)odified Ruby files 
 STAGED_FILES = `git diff-index --name-only --diff-filter=ACM HEAD -- '*.rb'`
 STAGED_FILES.lines do |file|
   file.chomp! # remove carriage returns
-  puts file
-    tailor_output = `tailor --max-line-length 999 #{ file }`
+    tailor_output = `tailor --max-line-length 999 #{ file } | sed -e 's/.*/\t\t\t> &/g'`
     unless $?.success?
-      puts tailor_output
+			puts "[ PRE-COMMIT ]   #{RED}FAIL#{N} 'tailor #{ file }'"
+			puts tailor_output
       exit 1
     end
+		puts "[ PRE-COMMIT ]   #{GREEN}Passsed#{N} 'tailor #{ file }'"
 end
 
-puts "Running foodcritic..." 
-fc_output = `foodcritic --epic-fail any #{ File.join(PARENT_PATH, COOKBOOK_NAME) }`
+puts "[ PRE-COMMIT ] Running foodcritic..." 
+fc_output = `foodcritic --epic-fail any #{ File.join(PARENT_PATH, COOKBOOK_NAME) } | sed -e 's/.*/\t\t\t> &/g' `
 unless $?.success?
+	puts "[ PRE-COMMIT ]   #{RED}FAIL#{N} 'foodcritic #{ File.join(PARENT_PATH, COOKBOOK_NAME) }'"
   puts fc_output
   exit 1
 end
+puts "[ PRE-COMMIT ]   #{GREEN}Passed#{N} 'foodcritic #{ File.join(PARENT_PATH, COOKBOOK_NAME) }'"
